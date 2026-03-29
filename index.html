@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meantz 한국 카토그램 마블 v1.01 </title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --gold-color: #ffd700;
+            --bg-color: #f4f6f9;
+            --panel-bg: #ffffff;
+            --info-color: #17a2b8;
+        }
+
+        body { font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; overflow: hidden; }
+        #main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 1600px; height: 100%; }
+        
+        #side-panel { flex: 0.7; min-width: 300px; display: flex; flex-direction: column; gap: 15px; height: 100%; }
+        #main-content { flex: 3; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; }
+
+        .panel-box { background: var(--panel-bg); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #eee; display: flex; flex-direction: column; }
+        h2 { margin: 0 0 5px 0; color: #333; font-size: 20px; text-align: center; }
+        .subtitle { color: #666; font-size: 12px; text-align: center; margin-bottom: 15px; }
+        
+        .btn { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        .btn-main { background: var(--primary-color); color: white; font-size: 16px; height: 60px; box-shadow: 0 4px 0 #0056b3; }
+        .btn-main:active { transform: translateY(2px); box-shadow: 0 2px 0 #0056b3; }
+        .btn-main:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+        .btn-save { background: white; color: var(--success-color); border: 2px solid var(--success-color); }
+        .btn-reset { background: white; color: var(--danger-color); border: 2px solid var(--danger-color); }
+        .btn-info { background: white; color: var(--info-color); border: 2px solid var(--info-color); margin-top: 5px; }
+        
+        .result-display { text-align: center; font-size: 22px; font-weight: bold; margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px inset #eee; }
+        #status-msg { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 14px; background: #fff; border: 1px solid #eee; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+
+        #modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;
+            backdrop-filter: blur(4px);
+        }
+        #custom-alert { 
+            background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; 
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        #modal-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; color: #333; }
+        #modal-desc { font-size: 16px; color: #666; margin-bottom: 20px; line-height: 1.5; }
+        .modal-btn { background: var(--primary-color); color: white; border: none; padding: 12px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; }
+        
+        .modal-gold { border: 5px solid var(--gold-color) !important; }
+        .modal-gold #modal-title { color: #b79500; }
+
+        @keyframes current-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0px rgba(0, 123, 255, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(0, 123, 255, 0.9); }
+            100% { transform: scale(1); box-shadow: 0 0 0px rgba(0, 123, 255, 0.7); }
+        }
+        .gold-glow { animation: gold-pulse 1.5s infinite; border: 2px solid var(--gold-color) !important; }
+
+        .log-section { flex: 1; overflow: hidden; }
+        .log { flex-grow: 1; font-size: 12px; color: #555; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #f9f9f9; }
+        .log-time { color: #999; margin-right: 5px; }
+
+        #map-container { 
+            flex: 1; display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; 
+            background: #e0e0e0; border: 2px solid #ccc; border-radius: 8px; padding: 10px; align-content: start;
+            overflow-y: auto;
+        }
+        .cell { aspect-ratio: 1/1; background: white; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 1px solid #eee; transition: all 0.2s; }
+        .cell-num { font-size: 10px; color: #ccc; }
+        .cell-name { display: none; }
+        .cell.has-name { background: #f8f9fa; border: 1px solid #ddd; }
+        .cell.has-name .cell-num { font-size: 9px; color: #666; font-weight: bold; position: absolute; top: 2px; left: 3px; }
+        .cell.has-name .cell-name { display: block; font-size: clamp(10px, 0.8vw, 14px); font-weight: 800; color: #333; line-height: 1.1; word-break: keep-all; margin-top: 5px; padding: 0 2px; }
+        
+        .cell.conquered { background: #d4edda !important; border-color: #c3e6cb !important; }
+        .cell.conquered::after { content: "🚩"; position: absolute; font-size: 10px; top: 1px; right: 2px; }
+
+        .cell.active { 
+            background: #fff3cd !important; 
+            z-index: 10; 
+            border: 3px solid var(--primary-color) !important; 
+            animation: current-pulse 1.5s infinite; 
+        }
+        .cell.active::after { content: "📍"; position: absolute; font-size: 12px; top: 1px; right: 2px; z-index: 11; }
+
+        .cell.clickable { cursor: pointer; border: 1px solid #ffd700 !important; }
+        .cell.clickable:hover { transform: scale(1.1); z-index: 10; background: #fffdf0 !important; }
+
+        .rule-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px 20px; font-size: 13px; color: #444; }
+        .rule-item { padding-left: 20px; position: relative; line-height: 1.4; }
+        .rule-item::before { content: "•"; position: absolute; left: 5px; color: var(--primary-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="modal-overlay">
+    <div id="custom-alert">
+        <div id="modal-title">알림</div>
+        <div id="modal-desc">내용이 표시됩니다.</div>
+        <button class="modal-btn" onclick="closeModal()">확인</button>
+    </div>
+</div>
+
+<div id="main-wrapper">
+    <div id="side-panel">
+        <div class="panel-box">
+            <h2>🗺️ Meantz 카토그램마블 🗺️</h2>
+            <p class="subtitle"><b>Ver. 1.01</b></p>
+            <p class="subtitle">대한민국 방방곡곡 여행 보드게임!!</p>
+            <div class="control-group">
+                <button id="roll-btn" class="btn btn-main" onclick="rollMoveDice()">🎲 주사위 던지기 🎲</button>
+                <div class="result-display" id="move-result">READY</div>
+                <div id="status-msg">여행을 시작하세요!</div>
+                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                    <button class="btn btn-save" onclick="saveGame()">💾 저장</button>
+                    <button class="btn btn-reset" onclick="resetGame()">🧹 초기화</button>
+                </div>
+                <button class="btn btn-info" onclick="showUpdateLog()">📢 업데이트 소식</button>
+            </div>
+        </div>
+
+        <div class="panel-box log-section">
+            <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px;">🚩 여행 기록</div>
+            <div class="log" id="log-box"></div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="map-container"></div>
+        
+        <div class="panel-box rule-section">
+            <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px;">📜 게임 규칙</div>
+            <div class="rule-list" id="rule-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const REGION_NAMES = { 
+        1: "인천 옹진군", 2: "인천 강화군", 3: "경기 김포시", 4: "경기 일산시 서", 5: "경기 일산시 동", 6: "경기 덕양구", 7: "서울 강북구", 8: "서울 도봉구", 9: "서울 노원구", 10: "경기 파주시",
+        11: "경기 연천군", 12: "강원 양구군", 13: "강원 인제군", 14: "강원 고성군", 15: "인천 서구", 16: "인천 계양구", 17: "서울 강서구", 18: "서울 마포구", 19: "서울 서대문구", 20: "서울 은평구",
+        21: "서울 성북구", 22: "서울 동대문구", 23: "서울 중랑구", 24: "경기 양주시", 25: "강원 철원군", 26: "강원 화천군", 27: "강원 속초시", 28: "인천 중구", 29: "인천 동구", 30: "인천 미추홀구",
+        31: "인천 부평구", 32: "서울 양천구", 33: "서울 용산구", 34: "서울 중구", 35: "서울 종로구", 36: "서울 성동구", 37: "서울 광진구", 38: "서울 강동구", 39: "경기 동두천시", 40: "경기 포천시",
+        41: "강원 춘천시", 42: "인천 연수구", 43: "인천 남동구", 44: "인천 부천구", 45: "서울 구로구", 46: "서울 금천구", 47: "서울 영등포구", 48: "서울 동작구", 49: "서울 관악구", 50: "서울 서초구",
+        51: "서울 강남구", 52: "서울 송파구", 53: "경기 의정부시", 54: "경기 남양주시", 55: "강원 양양군", 56: "경기 시흥시", 57: "경기 단원구", 58: "경기 광명시", 59: "경기 만안구", 60: "경기 동안구",
+        61: "경기 과천시", 62: "경기 의왕시", 63: "경기 구리시", 64: "경기 하남시", 65: "경기 양평군", 66: "경기 가평군", 67: "강원 홍천군", 68: "강원 강릉시", 69: "경기 화성시", 70: "경기 상록구",
+        71: "경기 군포시", 72: "경기 장안구", 73: "경기 팔달구", 74: "경기 수정구", 75: "경기 중원구", 76: "경기 수지구", 77: "경기 광주시", 78: "경기 여주시", 79: "강원 횡성군", 80: "강원 평창군",
+        81: "강원 정선군", 82: "강원 동해시", 83: "경기 평택시", 84: "경기 오산시", 85: "경기 권선동", 86: "경기 영통구", 87: "경기 분당구", 88: "경기 기흥구", 89: "경기 처인구", 90: "경기 안성시",
+        91: "경기 이천시", 92: "강원 원주시", 93: "강원 영월군", 94: "강원 태백시", 95: "강원 삼척시", 96: "충남 서산시", 97: "충남 당진시", 98: "충남 아산시", 99: "충남 천안시 서북", 100: "충남 천안시 동남",
+        101: "세종시　", 102: "충북 진천군", 103: "충북 음성군", 104: "충북 충주시", 105: "충북 제천시", 106: "충북 단양군", 107: "경북 영주시", 108: "경북 봉화군", 109: "경북 영양군", 110: "경북 울진군",
+        111: "경북 울릉군", 112: "충남 태안군", 113: "충남 홍성군", 114: "충남 예산군", 115: "대전 유성구", 116: "대전 서구", 117: "대전 대덕구", 118: "충북 흥덕구", 119: "충북 청원구", 120: "충북 증평군", 
+        121: "경북 문경시", 122: "경북 예천군", 123: "경북 안동시", 124: "경북 영천시", 125: "경북 청송군", 126: "경북 영덕군", 127: "충남 보령시", 128: "충남 청양군", 129: "충남 공주시", 130: "대전 중구", 
+        131: "대전 동구", 132: "충북 서원구", 133: "충북 상당구", 134: "충북 괴산군", 135: "경북 의성군", 136: "대구 북구", 137: "대구 동구", 138: "경북 경산시", 139: "경북 경주시", 140: "경북 포항시 북", 
+        141: "경북 포항시 남", 142: "충남 서천군", 143: "충남 부여군", 144: "충남 논산시", 145: "충남 계룡시", 146: "충남 금산군", 147: "충북 옥천군", 148: "충북 보은군", 149: "경북 상주시", 150: "경북 군위군",
+        151: "대구 서구", 152: "대구 중구", 153: "경북 청도군", 154: "울산 중구", 155: "울산 북구", 156: "울산 동구", 157: "전북 군산시", 158: "전북 익산시", 159: "전북 덕진구", 160: "전북 완산구",
+        161: "전북 완주군", 162: "충북 영동군", 163: "경북 구미시", 164: "경북 칠곡군", 165: "대구 달서구", 166: "대구 남구", 167: "대구 수성구", 168: "울산 울주군", 169: "울산 남구", 170: "부산 금정구",
+        171: "부산 기장군", 172: "전북 부안군", 173: "전북 김제시", 174: "전북 임실군", 175: "전북 진안군", 176: "전북 무주군", 177: "경북 김천시", 178: "경북 성주군", 179: "경북 고령군", 180: "대구 달성군", 
+        181: "경남 창녕군", 182: "경남 밀양시", 183: "경남 양산시", 184: "부산 동래구", 185: "부산 수영구", 186: "부산 해운대구", 187: "전남 영광군", 188: "전남 장성군", 189: "전북 고창군", 190: "전북 정읍시",
+        191: "전북 순천시", 192: "전북 장수군", 193: "경남 거창군", 194: "경남 합천군", 195: "경남 함안군", 196: "경남 의창구", 197: "경남 김해시", 198: "부산 북구", 199: "부산 부산진구", 200: "부산 연제구",
+        201: "부산 동구", 202: "부산 남구", 203: "전남 함평군", 204: "광주 광산구", 205: "광주 서구", 206: "광주 북구", 207: "전남 담양군", 208: "전북 남원시", 209: "경남 함양군", 210: "경남 의령군", 
+        211: "경남 진주시", 212: "경남 마산회원", 213: "경남 성산읍", 214: "부산 강서구", 215: "부산 사상구", 216: "부산 중구", 217: "부산 영도구", 218: "전남 무안군", 219: "전남 나주시", 220: "광주 남구", 
+        221: "광주 동구", 222: "전남 화순군", 223: "전남 곡성군", 224: "전남 구례군", 225: "경남 산청군", 226: "경남 사천시", 227: "경남 고성군", 228: "경남 마산합포", 229: "경남 진해구", 230: "부산 사하구",
+        231: "부산 서구", 232: "전남 신안군", 233: "전남 목포시", 234: "전남 영암군", 235: "전남 강진군", 236: "전남 장흥군", 237: "전남 보성군", 238: "전남 순천시", 239: "전남 광양시", 240: "경남 하동군",
+        241: "경남 남해군", 242: "경남 통영시", 243: "경남 거제시", 244: "전남 진도군", 245: "전남 해남군", 246: "전남 완도군", 247: "전남 고흥군", 248: "전남 여수시", 249: "제주 제주시", 250: "제주 서귀포시" };
+
+    const TOTAL_CELLS = 250;
+    const GOLD_KEY_CHANCE = 0.10;
+    const DUPLICATE_RATE = 0.15;
+
+    const GOLD_KEYS = [
+        { name: "꽝!", desc: "저런, 꽝에 걸렸네요.", action: "normal" },
+        { name: "다시 돌리기", desc: "주사위를 무효화하고 다시 한 번 던집니다!", action: "retry" },
+        { name: "지정한 곳 가기", desc: "원하는 지역을 직접 클릭해서 이동하세요!", action: "select" },
+        { name: "당일여행 가기", desc: "반드시 당일치기로 다녀오세요.", action: "normal" },
+        { name: "하루 쉬어가기", desc: "이번 여행은 따뜻한 집에서.", action: "stay" },
+        { name: "금액 제한 미션", desc: "경비 20만원 내로 여행을 완료하세요!", action: "normal" },
+        { name: "교통수단 제한", desc: "자차 금지! 대중교통(기차/버스)만 이용하세요.", action: "normal" },
+        { name: "현지인 추천 맛집", desc: "검색 금지! 현지인에게 물어보고 식사하세요.", action: "normal" }
+    ];
+
+    let conqueredList = new Set();
+    let currentPos = null;
+    let isSelectMode = false;
+
+
+    // --- 업데이트 로그 표시 함수 ---
+    function showUpdateLog() {
+        const updateContent = `
+            v1.5 업데이트 내용 (2024.05)
+            • 전국 완주 엔딩 : 250개 칸을 모두 채우면 명예로운 축하 메시지가 나타납니다.
+            • 지역선택 황금열쇠 : 하이라이트를 주게하여 정보의 직관성을 높혔습니다.
+        `;
+        showAlert("📢 업데이트 소식", updateContent);
+    }
+
+
+
+    // --- 전국 제패 체크 함수 ---
+    function checkGameEnd() {
+        if (conqueredList.size >= TOTAL_CELLS) {
+            showAlert("🏆 전국 제패 성공!", "축하합니다! 대한민국 250개 지역을 모두 정복하셨습니다. 당신은 진정한 여행왕입니다!", false);
+            addLog("🎊 축하합니다! 모든 지역을 정복했습니다! 🎊", "#28a745");
+            rollBtn.disabled = true;
+            rollBtn.innerText = "🏆 탐험 완료";
+            return true;
+        }
+        return false;
+    }
+
+    function rollMoveDice() {
+        if (isSelectMode) return;
+        
+        const available = [];
+        const conquered = Array.from(conqueredList);
+        for (let i = 1; i <= TOTAL_CELLS; i++) {
+            if (!conqueredList.has(i)) available.push(i);
+        }
+
+        if (available.length === 0) {
+            checkGameEnd();
+            return;
+        }
+
+        if (Math.random() < GOLD_KEY_CHANCE) {
+            const key = GOLD_KEYS[Math.floor(Math.random() * GOLD_KEYS.length)];
+            showAlert(`✨ 황금열쇠: ${key.name}`, key.desc, true);
+            addLog(`🎁 황금열쇠: ${key.name}`, '#b79500');
+            if (key.action === "retry") return;
+            if (key.action === "select") { enableSelectMode(); return; }
+            if (key.action === "stay") return;
+        }
+
+        let selectedNum;
+        const isDuplicateRoll = Math.random() < DUPLICATE_RATE;
+
+        if (isDuplicateRoll && conquered.length > 0) {
+            selectedNum = conquered[Math.floor(Math.random() * conquered.length)];
+            const name = REGION_NAMES[selectedNum] || "";
+            document.getElementById('move-result').innerText = `중복 발생!`;
+            showAlert("🚫 중복 지역", `${selectedNum}번 [${name}]은 이미 방문한 곳입니다. 아쉽지만 무효!`);
+            addLog(`${selectedNum}번 이미 방문함`, '#dc3545');
+            statusMsg.innerText = `🚫 중복: ${selectedNum}번 [${name}]`;
+        } else {
+            selectedNum = available[Math.floor(Math.random() * available.length)];
+            document.getElementById('move-result').innerText = `🎲 결과: ${selectedNum}`;
+            moveTo(selectedNum);
+        }
+    }
+
+    const mapContainer = document.getElementById('map-container');
+    const logBox = document.getElementById('log-box');
+    const statusMsg = document.getElementById('status-msg');
+    const rollBtn = document.getElementById('roll-btn');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-desc');
+    const customAlert = document.getElementById('custom-alert');
+
+    function showAlert(title, desc, isGold = false) {
+        modalTitle.innerText = title;
+        modalDesc.innerText = desc;
+        if(isGold) customAlert.classList.add('modal-gold');
+        else customAlert.classList.remove('modal-gold');
+        modalOverlay.style.display = 'flex';
+    }
+
+    function closeModal() { modalOverlay.style.display = 'none'; }
+
+    function createMap() {
+        mapContainer.innerHTML = '';
+        for (let i = 1; i <= TOTAL_CELLS; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (REGION_NAMES[i]) cell.classList.add('has-name');
+            cell.id = `cell-${i}`;
+            cell.onclick = () => handleCellClick(i);
+            cell.innerHTML = `<span class="cell-num">${i}</span><span class="cell-name">${REGION_NAMES[i] || ""}</span>`;
+            mapContainer.appendChild(cell);
+        }
+    }
+
+    function moveTo(num) {
+        if (currentPos) document.getElementById(`cell-${currentPos}`)?.classList.remove('active');
+        currentPos = num;
+        const targetCell = document.getElementById(`cell-${num}`);
+        if (targetCell) {
+            targetCell.classList.add('active', 'conquered');
+            conqueredList.add(num);
+            addLog(`${num}번 [${REGION_NAMES[num]}] 정복!`);
+            updateStatusText();
+            saveGame();
+            checkGameEnd(); // 정복 후 엔딩 체크
+        }
+    }
+
+    function handleCellClick(num) {
+        if (!isSelectMode) return;
+        if (conqueredList.has(num)) { showAlert("알림", "이미 정복한 지역입니다."); return; }
+        if (currentPos) document.getElementById(`cell-${currentPos}`)?.classList.remove('active');
+        currentPos = num;
+        conqueredList.add(num);
+        document.getElementById(`cell-${num}`).classList.add('conquered', 'active');
+        addLog(`✨ 황금열쇠(지정): ${num}번 [${REGION_NAMES[num]}]`, '#b79500');
+        disableSelectMode();
+        updateStatusText();
+        saveGame();
+        checkGameEnd(); // 수동 선택 후에도 엔딩 체크
+    }
+
+    function enableSelectMode() {
+        isSelectMode = true;
+        mapContainer.classList.add('gold-glow');
+        rollBtn.disabled = true;
+        statusMsg.innerText = "🎫 원하는 지역을 선택하세요!";
+        document.querySelectorAll('.cell').forEach(c => c.classList.add('clickable'));
+    }
+
+    function disableSelectMode() {
+        isSelectMode = false;
+        mapContainer.classList.remove('gold-glow');
+        rollBtn.disabled = false;
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('clickable'));
+    }
+
+    function updateStatusText() {
+        const name = REGION_NAMES[currentPos] ? ` [${REGION_NAMES[currentPos]}]` : "";
+        statusMsg.innerText = `📍 현재: ${currentPos || '시작전'}번${name} (${conqueredList.size}/${TOTAL_CELLS})`;
+        statusMsg.style.color = 'var(--primary-color)';
+    }
+
+    function addLog(msg, color = '') {
+        const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        if(color) logEntry.style.color = color;
+        logEntry.innerHTML = `<span class="log-time">[${time}]</span>${msg}`;
+        logBox.insertBefore(logEntry, logBox.firstChild);
+    }
+
+    const SAVE_KEY = 'korea_marble_v2_final';
+    function saveGame() {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ conquered: Array.from(conqueredList), lastPos: currentPos }));
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem(SAVE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            conqueredList = new Set(data.conquered);
+            currentPos = data.lastPos;
+            conqueredList.forEach(num => document.getElementById(`cell-${num}`)?.classList.add('conquered'));
+            if (currentPos) { document.getElementById(`cell-${currentPos}`)?.classList.add('active'); updateStatusText(); }
+            checkGameEnd(); // 로드 시에도 엔딩 여부 확인
+        }
+    }
+
+    function resetGame() {
+        if (confirm("정말로 모든 여행 기록을 초기화하시겠습니까?")) {
+            localStorage.removeItem(SAVE_KEY);
+            location.reload();
+        }
+    }
+
+    createMap();
+    loadGame();
+    document.getElementById('rule-list').innerHTML = [
+        "대한민국에 있는 지역을 돌아다니는 게임입니다.",
+        "주사위를 굴려 나온 숫자의 지역으로 이동합니다.",
+        "모든 지역(250개)을 정복하는 것이 목표입니다.",
+        "지역에 걸렸을 시 무조건 다녀와야 합니다.",
+        "이미 방문한 지역은 무효 처리됩니다.",
+        "10% 확률로 황금열쇠가 발동합니다.",
+        "황금열쇠 지시 이행 후 다음 주사위를 돌립니다.",
+        "황금열쇠 발동 시 특수 규칙이 적용됩니다.",
+        "당일 여행 황금열쇠 후 섬지역에 걸렸다면 당일여행 황금열쇠는 무효로 처리합니다.",
+        "기상 악화 등 변수 발생 시 다음 기회로 미룰 수 있습니다.",
+        "중복하여 걸리는 확률을 85%로 조정하여 과다한 지역 중복을 완화."
+    ].map(r => `<div class="rule-item">${r}</div>`).join('');
+</script>
+</body>
+</html>
