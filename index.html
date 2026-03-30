@@ -17,6 +17,16 @@
         }
 
         body { font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; overflow: hidden; }
+
+        <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: flex; justify-content: center; align-items: center; z-index: 10000;">
+    <div class="panel-box" style="width: 300px; text-align: center;">
+        <h2>👤 여행자 등록</h2>
+        <p class="subtitle">아이디를 입력하여 여행을 시작하세요.</p>
+        <input type="text" id="user-id" placeholder="사용자 이름 (영어/숫자)" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+        <button class="btn btn-main" onclick="login()">여행 시작하기</button>
+    </div>
+</div>
+        
         #main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 1600px; height: 100%; }
         
         #side-panel { flex: 0.7; min-width: 300px; display: flex; flex-direction: column; gap: 15px; height: 100%; }
@@ -190,6 +200,33 @@
     let currentPos = null;
     let isSelectMode = false;
 
+    let currentUser = null; // 현재 로그인된 사용자 아이디
+
+function login() {
+    const idInput = document.getElementById('user-id').value.trim();
+    if (!idInput) {
+        alert("아이디를 입력해주세요!");
+        return;
+    }
+    currentUser = idInput;
+    document.getElementById('login-overlay').style.display = 'none'; // 로그인창 숨기기
+    
+    // 유저가 바뀌었으므로 맵을 초기화하고 해당 유저 데이터 로드
+    resetMapUI(); 
+    loadGame(); 
+    addLog(`👋 ${currentUser} 여행자님, 환영합니다!`);
+}
+
+// UI를 깨끗하게 비우는 함수 (사용자 전환용)
+function resetMapUI() {
+    conqueredList = new Set();
+    currentPos = null;
+    document.querySelectorAll('.cell').forEach(c => {
+        c.classList.remove('conquered', 'active');
+    });
+    logBox.innerHTML = '';
+}
+
 
     // --- 업데이트 로그 표시 함수 ---
     function showUpdateLog() {
@@ -346,19 +383,37 @@
     }
 
     const SAVE_KEY = 'korea_marble_v2_final';
+    function getSaveKey() {
+        return `korea_marble_user_${currentUser}`;
+    }
+
     function saveGame() {
-        localStorage.setItem(SAVE_KEY, JSON.stringify({ conquered: Array.from(conqueredList), lastPos: currentPos }));
+        if (!currentUser) return;
+        localStorage.setItem(getSaveKey(), JSON.stringify({ 
+            conquered: Array.from(conqueredList), 
+            lastPos: currentPos 
+        }));
     }
 
     function loadGame() {
-        const saved = localStorage.getItem(SAVE_KEY);
+        if (!currentUser) return;
+        const saved = localStorage.getItem(getSaveKey());
         if (saved) {
             const data = JSON.parse(saved);
             conqueredList = new Set(data.conquered);
             currentPos = data.lastPos;
-            conqueredList.forEach(num => document.getElementById(`cell-${num}`)?.classList.add('conquered'));
-            if (currentPos) { document.getElementById(`cell-${currentPos}`)?.classList.add('active'); updateStatusText(); }
-            checkGameEnd(); // 로드 시에도 엔딩 여부 확인
+        
+            conqueredList.forEach(num => {
+                const cell = document.getElementById(`cell-${num}`);
+                if (cell) cell.classList.add('conquered');
+            });
+        
+            if (currentPos) {
+                const activeCell = document.getElementById(`cell-${currentPos}`);
+                if (activeCell) activeCell.classList.add('active');
+                updateStatusText();
+            }
+            checkGameEnd();
         }
     }
 
@@ -369,8 +424,9 @@
         }
     }
 
-    createMap();
-    loadGame();
+// 기존 하단 코드 수정
+createMap();
+// loadGame();
     document.getElementById('rule-list').innerHTML = [
         "대한민국에 있는 지역을 돌아다니는 게임입니다.",
         "주사위를 굴려 나온 숫자의 지역으로 이동합니다.",
